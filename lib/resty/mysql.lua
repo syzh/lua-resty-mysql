@@ -24,9 +24,12 @@ local error = error
 local tonumber = tonumber
 
 
-if not ngx.config
-   or not ngx.config.ngx_lua_version
-   or ngx.config.ngx_lua_version < 9011
+if not ngx.config then
+    error("ngx_lua 0.9.11+ or ngx_stream_lua required")
+end
+
+if (not ngx.config.subsystem or ngx.config.subsystem == "http") -- subsystem is http
+    and (not ngx.config.ngx_lua_version or ngx.config.ngx_lua_version < 9011) -- old version
 then
     error("ngx_lua 0.9.11+ required")
 end
@@ -38,7 +41,7 @@ if not ok then
 end
 
 
-local _M = { _VERSION = '0.21' }
+local _M = { _VERSION = '0.22' }
 
 
 -- constants
@@ -568,7 +571,8 @@ function _M.connect(self, opts)
             pool = user .. ":" .. database .. ":" .. host .. ":" .. port
         end
 
-        ok, err = sock:connect(host, port, { pool = pool })
+        ok, err = sock:connect(host, port, { pool = pool, pool_size = opts.pool_size,
+                               backlog = opts.backlog})
 
     else
         local path = opts.path
@@ -580,7 +584,8 @@ function _M.connect(self, opts)
             pool = user .. ":" .. database .. ":" .. path
         end
 
-        ok, err = sock:connect("unix:" .. path, { pool = pool })
+        ok, err = sock:connect("unix:" .. path, { pool = pool, pool_size = opts.pool_size,
+                               backlog = opts.backlog})
     end
 
     if not ok then
